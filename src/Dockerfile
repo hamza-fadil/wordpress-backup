@@ -1,14 +1,10 @@
-FROM ubuntu
+FROM alpine:3.18
 
-MAINTAINER Angelo Veltens <angelo.veltens@online.de>
-
-RUN apt-get update && \
-    apt-get install mysql-client cron bzip2 -y && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
+RUN apk update && \
+    apk add --no-cache mysql-client busybox-suid bzip2 && \
     mkdir /backups
 
-ENV MYSQL_ENV_MYSQL_HOST mysql
+ENV MYSQL_ENV_MYSQL_HOST mysql 
 ENV BACKUP_TIME 0 3 * * *
 
 COPY docker-entrypoint.sh /entrypoint.sh
@@ -18,4 +14,4 @@ VOLUME /backups
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-CMD ["cron", "-f"]
+CMD ["crond", "-f"]
