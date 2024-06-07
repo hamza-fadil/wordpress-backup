@@ -3,23 +3,26 @@ set -e
 set -o pipefail
 
 cleanup() {
-  echo "Cleanup backup older than $CLEANUP_OLDER_THAN days"
-  toberemove=$(find /backups/ -type f -not -name ".*" -mtime +$CLEANUP_OLDER_THAN | wc -l)
-  echo "Will try to remove $toberemove files"
-  find /backups/ -type f -not -name ".*" -mtime +$CLEANUP_OLDER_THAN -exec rm {} \;
+    echo "Cleaning up backups older than $CLEANUP_OLDER_THAN days"
+    to_be_removed=$(find /backups/ -type f -not -name ".*" -mtime +$CLEANUP_OLDER_THAN | wc -l)
+    echo "Removing $to_be_removed files"
+    find /backups/ -type f -not -name ".*" -mtime +$CLEANUP_OLDER_THAN -exec rm {} \;
 }
 
-if [ -z "$MYSQL_ENV_MYSQL_HOST" ]; then echo "Error: MYSQL_ENV_MYSQL_HOST not set"; echo "Finished: FAILURE"; exit 1; fi
-if [ -z "$MYSQL_ENV_MYSQL_USER" ]; then echo "Error: MYSQL_ENV_MYSQL_USER not set"; echo "Finished: FAILURE"; exit 1; fi
-if [ -z "$MYSQL_ENV_MYSQL_DATABASE" ]; then echo "Error: MYSQL_ENV_MYSQL_DATABASE not set"; echo "Finished: FAILURE"; exit 1; fi
-if [ -z "$MYSQL_ENV_MYSQL_PASSWORD" ]; then echo "Error: MYSQL_ENV_MYSQL_PASSWORD not set"; echo "Finished: FAILURE"; exit 1; fi
+for var in MYSQL_ENV_MYSQL_HOST MYSQL_ENV_MYSQL_USER MYSQL_ENV_MYSQL_DATABASE MYSQL_ENV_MYSQL_PASSWORD; do
+    if [ -z "$(eval echo \$$var)" ]; then
+        echo "Error: $var not set"
+        echo "Finished: FAILURE"
+        exit 1
+    fi
+done
 
-if [ -n "$CLEANUP_OLDER_THAN" ]; then cleanup;  fi
+if [ -n "$CLEANUP_OLDER_THAN" ]; then cleanup; fi
 
-echo 'creating backup archive of /var/www/html'
-tar --create --gzip -vv --directory="/var/www/html/" --file="/backups/backup_`date '+%Y%m%d'`.tar.gz" "./"
+echo 'Creating backup archive of /var/www/html'
+tar --create --directory="/var/www/html/" ./ | pigz -p 4 > "/backups/backup_$(date '+%Y%m%d').tar.gz"
 
-echo 'creating database dump'
-mysqldump --host="${MYSQL_ENV_MYSQL_HOST}" --add-drop-table --no-tablespaces --user="${MYSQL_ENV_MYSQL_USER}" --password="${MYSQL_ENV_MYSQL_PASSWORD}" "${MYSQL_ENV_MYSQL_DATABASE}" --single-transaction --column-statistics=0 | bzip2 -c > "/backups/backup_`date '+%Y%m%d'`.sql.bz2"
+echo 'Creating database dump'
+mysqldump --host="$MYSQL_ENV_MYSQL_HOST" --user="$MYSQL_ENV_MYSQL_USER" --password="$MYSQL_ENV_MYSQL_PASSWORD" --add-drop-table --no-tablespaces --single-transaction "$MYSQL_ENV_MYSQL_DATABASE" | bzip2 > "/backups/backup_$(date '+%Y%m%d').sql.bz2"
 
 echo 'Finished: SUCCESS'
