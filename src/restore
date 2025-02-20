@@ -41,7 +41,7 @@ echo "Deleting files from /var/www/html/"
 rm -rf /var/www/html/*
 
 echo "Restoring files from $FILES_ARCHIVE to /var/www/html"
-pigz -dc "${FILES_ARCHIVE}" | tar -xzf - --directory="/var/www/html/"
+pigz -dc "${FILES_ARCHIVE}" | tar -xvf - --directory="/var/www/html/"
 
 WP_CONFIG="/var/www/html/wp-config.php"
 sed -i -e "s/define('DB_NAME', '.*');/define('DB_NAME', '$MYSQL_ENV_MYSQL_DATABASE');/" \
