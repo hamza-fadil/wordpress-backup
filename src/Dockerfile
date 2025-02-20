@@ -1,7 +1,7 @@
 FROM alpine:3.18
 
 RUN apk update && \
-    apk add --no-cache mysql-client busybox-suid bzip2 pigz && \
+    apk add --no-cache mysql-client busybox-suid bzip2 tar pigz && \
     mkdir /backups
 
 ENV MYSQL_ENV_MYSQL_HOST mysql
